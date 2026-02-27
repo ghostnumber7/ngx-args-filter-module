@@ -4,7 +4,9 @@ This repository builds a Rust-based NGINX dynamic module and validates behavior 
 
 GitHub Actions validates the workspace on `ubuntu-latest` and `macos-latest` using:
 
-- `cargo test --workspace -- --nocapture`
+- Linux baseline: `cargo test --workspace --exclude integration-tests -- --nocapture`
+- Linux integration matrix (all required):  `cargo test -p integration-tests -- --nocapture` with multiple NGINX versions, starting at `NGX_VERSION=1.15.0`
+- macOS representative run: `cargo test --workspace -- --nocapture`
 
 ## Supported Build Platforms
 
@@ -63,6 +65,18 @@ cargo clippy --workspace --all-targets
 cargo test --workspace -- --nocapture
 ```
 
+### Local NGINX Version Matrix Check
+
+Use this to mirror the Linux CI compatibility checks locally:
+
+```bash
+for v in 1.15.0 1.18.0 1.22.1 1.28.2 1.29.5; do
+  echo "Testing NGX_VERSION=${v}"
+  NGX_VERSION="${v}" NGX_CFLAGS="-Wno-deprecated-declarations" \
+    cargo test -p integration-tests -- --nocapture
+done
+```
+
 ## Build Environment Variables
 
 - `NGX_VERSION`: target NGINX version. If unset, `scripts/build.sh` auto-detects from local `nginx -v` when available, otherwise uses the script default.
@@ -82,6 +96,28 @@ PCRE_PREFIX=/opt/homebrew/opt/pcre bash ./scripts/build.sh
 ```
 
 ## Troubleshooting
+
+### Signature tooling (`gpg`/`dirmngr`) for vendored source verification
+
+Symptom:
+
+- builds fail while importing verification keys or checking source signatures.
+
+Actions:
+
+- install required tooling (`gnupg` package, including `gpg` and `dirmngr`).
+- verify availability:
+
+```bash
+command -v gpg
+command -v dirmngr
+```
+
+For constrained local troubleshooting only (not recommended for CI), you can disable signature checks:
+
+```bash
+NGX_NO_SIGNATURE_CHECK=1 NGX_VERSION=1.28.2 bash ./scripts/build.sh
+```
 
 ### macOS SDK sysroot errors (`sys/types.h` not found)
 

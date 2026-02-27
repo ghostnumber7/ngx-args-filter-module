@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:
@@ -23,6 +31,8 @@ jobs:
     timeout-minutes: 45
     env:
       CARGO_TARGET_DIR: /tmp/ngxaf-target
+      NGX_VERSION: 1.28.2
+      NGX_CFLAGS: -Wno-deprecated-declarations
     steps:
       - name: Checkout
         uses: actions/checkout@v6

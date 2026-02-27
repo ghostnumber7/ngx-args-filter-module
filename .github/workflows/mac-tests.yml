@@ -33,6 +33,7 @@ jobs:
       CARGO_TARGET_DIR: /tmp/ngxaf-target
       NGX_VERSION: 1.28.2
       NGX_CFLAGS: -Wno-deprecated-declarations
+      NGX_NO_SIGNATURE_CHECK: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@v6

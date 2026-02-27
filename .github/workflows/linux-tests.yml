@@ -78,14 +78,17 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Ensure signature tooling is available
+      - name: Ensure signature tooling and PCRE development libraries are available
         run: |
-          if ! command -v gpg >/dev/null 2>&1 || ! command -v dirmngr >/dev/null 2>&1; then
+          if ! command -v gpg >/dev/null 2>&1 \
+            || ! command -v dirmngr >/dev/null 2>&1 \
+            || ! dpkg -s libpcre3-dev >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y --no-install-recommends gnupg dirmngr
+            sudo apt-get install -y --no-install-recommends gnupg dirmngr libpcre3-dev
           fi
           command -v gpg >/dev/null 2>&1
           command -v dirmngr >/dev/null 2>&1
+          dpkg -s libpcre3-dev >/dev/null 2>&1
 
       - name: Test integration suite on selected NGINX version
         run: cargo test -p integration-tests -- --nocapture

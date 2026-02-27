@@ -1,0 +1,2 @@
+[alias]
+build-module = ["run", "--quiet", "-p", "xtask"]

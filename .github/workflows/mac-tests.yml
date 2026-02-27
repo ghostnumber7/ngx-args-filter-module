@@ -1,0 +1,60 @@
+name: Mac Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: mac-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Mac Tests
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      CARGO_TARGET_DIR: /tmp/ngxaf-target
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set isolated Rust paths
+        run: |
+          echo "CARGO_HOME=${RUNNER_TEMP}/cargo-home" >> "${GITHUB_ENV}"
+          echo "RUSTUP_HOME=${RUNNER_TEMP}/rustup-home" >> "${GITHUB_ENV}"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Verify toolchain dependencies
+        run: |
+          command -v brew >/dev/null 2>&1 || {
+            echo "Homebrew not found on GitHub-hosted macOS runner"
+            exit 1
+          }
+          brew list --versions openssl@3 >/dev/null 2>&1 || brew install openssl@3
+          brew list --versions pcre >/dev/null 2>&1 || brew install pcre
+
+      - name: Configure macOS SDK sysroot
+        run: |
+          SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
+          if [ -z "${SDK_PATH}" ] || [ ! -f "${SDK_PATH}/usr/include/sys/types.h" ]; then
+            echo "macOS SDK headers not found under SDKROOT"
+            exit 1
+          fi
+          echo "SDKROOT=${SDK_PATH}" >> "${GITHUB_ENV}"
+          echo "BINDGEN_EXTRA_CLANG_ARGS=--sysroot=${SDK_PATH}" >> "${GITHUB_ENV}"
+          echo "CFLAGS=-isysroot ${SDK_PATH}" >> "${GITHUB_ENV}"
+          echo "CPPFLAGS=-isysroot ${SDK_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Test workspace
+        run: cargo test --workspace -- --nocapture

@@ -78,6 +78,10 @@ location /api/ {
 - Linux
 - macOS
 
+## Supported NGINX Versions
+
+- Minimum supported NGINX version: `1.15.0`
+
 ## Build Dependencies
 
 For complete setup and troubleshooting, see [docs/build.md](docs/build.md).

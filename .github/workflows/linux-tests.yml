@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   workflow_dispatch:
 
 permissions:
@@ -36,5 +44,48 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Test workspace
-        run: cargo test --workspace -- --nocapture
+      - name: Test workspace (excluding integration matrix crate)
+        run: cargo test --workspace --exclude integration-tests -- --nocapture
+
+  nginx-version-matrix:
+    name: Linux NGINX Matrix (${{ matrix.ngx_version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        ngx_version:
+          - "1.15.0"
+          - "1.18.0"
+          - "1.22.1"
+          - "1.28.2"
+          - "1.29.5"
+    env:
+      NGX_VERSION: ${{ matrix.ngx_version }}
+      NGX_CFLAGS: -Wno-deprecated-declarations
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set isolated Rust paths
+        run: |
+          echo "CARGO_HOME=${RUNNER_TEMP}/cargo-home" >> "${GITHUB_ENV}"
+          echo "RUSTUP_HOME=${RUNNER_TEMP}/rustup-home" >> "${GITHUB_ENV}"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Ensure signature tooling is available
+        run: |
+          if ! command -v gpg >/dev/null 2>&1 || ! command -v dirmngr >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends gnupg dirmngr
+          fi
+          command -v gpg >/dev/null 2>&1
+          command -v dirmngr >/dev/null 2>&1
+
+      - name: Test integration suite on selected NGINX version
+        run: cargo test -p integration-tests -- --nocapture
